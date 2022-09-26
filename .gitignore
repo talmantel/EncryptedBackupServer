@@ -1,0 +1,10 @@
+# created by virtualenv automatically
+/Lib/*
+/Scripts/*
+pyenv.cfg
+/.idea/EncryptedBackupServer.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/pyvenv.cfg
+/.idea/vcs.xml
