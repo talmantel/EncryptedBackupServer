@@ -6,7 +6,7 @@ DEFAULT_PORT = 1234
 
 
 def getPort():
-    p = Path("PORT_INFO_FILE")
+    p = Path(PORT_INFO_FILE)
     if p.exists():
         try:
             with open(PORT_INFO_FILE, "r") as portInfo:

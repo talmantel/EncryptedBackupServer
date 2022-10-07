@@ -98,6 +98,14 @@ class Database:
         return self.execute(f"INSERT INTO {Database.CLIENTS_TABLE} VALUES (?, ?, ?, ?)",
                             [clnt.ID, clnt.Name, clnt.PublicKey, clnt.LastSeen], True)
 
+    def updateClientLastSeen(self, client):
+        client.LastSeen = str(datetime.now())
+        return
+
+        """ set last seen given a client_id """
+        return self.execute(f"UPDATE {Database.CLIENTS_TABLE} SET LastSeen = ? WHERE ID = ?",
+                            [str(datetime.now()), client_id], True)
+
 
     def getClientByUsername(self, username):
         for client in self.clients:
@@ -141,10 +149,6 @@ class Database:
         """ remove a message by id from database """
         return self.execute(f"DELETE FROM {Database.MESSAGES} WHERE ID = ?", [msg_id], True)
 
-    def updateClientLastSeen(self, client_id):
-        """ set last seen given a client_id """
-        return self.execute(f"UPDATE {Database.CLIENTS_TABLE} SET LastSeen = ? WHERE ID = ?",
-                            [str(datetime.now()), client_id], True)
 
     def getClientsList(self):
         """ query for all clients """
