@@ -12,7 +12,7 @@ handler = requestHandler.Handler(PACKET_SIZE, DATABASE_FILE)
 
 def accept(sock, mask):
     conn, addr = sock.accept()
-    print('accepted', conn, 'from', addr)
+    #print('accepted', conn, 'from', addr)
     conn.setblocking(False)
     sel.register(conn, selectors.EVENT_READ, read)
 
