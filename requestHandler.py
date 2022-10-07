@@ -67,7 +67,7 @@ class Handler:
         response = protocol.RegistrationSuccessResponse()
         response.clientID = client.ID
         self.write(conn, response.pack())
-        print(f"Successful regustration of: {client}")
+        print(f"Successful regustration of: \n{client}\n")
 
 
     def handlePublicKeyRequest(self, conn, requestHeader, data):
@@ -87,6 +87,7 @@ class Handler:
         response.clientID = client.ID
         response.AESKey = encryptedKey
         self.write(conn, response.pack())
+        print(f"Successful regustration of encryption keys for client: \n{client}\n")
 
     def handleSendFileRequest(self, conn, requestHeader, data):
         pass

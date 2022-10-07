@@ -13,7 +13,7 @@ class Client:
         self.AES = None
 
     def __repr__(self):
-        return f"{self.ID}, {self.Name}, {self.PublicKey}, {self.LastSeen}, {self.AES}"
+        return f"{self.ID}, {self.Name}, {self.LastSeen}\n--{self.PublicKey}\n--{self.AES}"
 
 class File:
     def __init__(self, clientId, fileName, pathName, verified):
