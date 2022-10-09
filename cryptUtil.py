@@ -13,6 +13,8 @@ def encryptWithPublicKey(content, publicKey):
     pass
 
 def decrypt(buffer, AESKey):
+    return buffer
+    #TODO
     iv = b'\0' * protocol.AES_KEY_SIZE  # Default zero
     cipher = AES.new(os.urandom(protocol.AES_KEY_SIZE), AES.MODE_CBC, iv)
     decoded = cipher.decrypt(buffer)

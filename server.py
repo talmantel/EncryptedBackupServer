@@ -2,18 +2,19 @@ import requestHandler
 import selectors
 import socket
 
-PACKET_SIZE = 1024
+
 DATABASE_FILE = "server.db"
+CLIENT_FILES_FILDER = "files"
 QUEUE_SIZE = 100
 
 sel = selectors.DefaultSelector()
-handler = requestHandler.Handler(PACKET_SIZE, DATABASE_FILE)
+handler = requestHandler.Handler(DATABASE_FILE, CLIENT_FILES_FILDER)
 
 
 def accept(sock, mask):
     conn, addr = sock.accept()
     #print('accepted', conn, 'from', addr)
-    conn.setblocking(False)
+    conn.setblocking(True)
     sel.register(conn, selectors.EVENT_READ, read)
 
 

@@ -114,6 +114,13 @@ class Database:
         return None
         pass  # TODO
 
+    def getClientById(self, clientId):
+        for client in self.clients:
+            if client.ID == clientId:
+                return client
+        return None
+        pass  # TODO
+
 
     def setClientKeys(self, client, publicKey, AESKey):
         client.PublicKey = publicKey
@@ -121,6 +128,34 @@ class Database:
         return
 
         return self.execute(f"UPDATE {Database.CLIENTS_TABLE} VALUES set PublicKey = ?, AES = ?", [publicKey, AESKey], True)
+
+    def saveFile(self, client, filePath, fileName):
+        #Remove all files with same name and client
+        self.files = [file for file in self.files if file.ID != client.ID or file.FileName != fileName]
+        self.files.append(File(client.ID, fileName, filePath, False))
+        return
+        #TODO
+
+
+    def getFile(self, client, fileName):
+        for file in self.files:
+            if file.ID == client.ID or file.FileName == fileName:
+                return file
+        return None
+        #TODO
+
+
+    def verifyFile(self, file):
+        file.Verified = True
+        #TODO
+
+    def removeFile(self, file):
+        self.files.remove(file)
+        # TODO
+
+
+
+
 
 
 
