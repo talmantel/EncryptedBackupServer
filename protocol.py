@@ -50,6 +50,7 @@ class RequestHeader:
     def unpack(self, data):
         try:
             self.clientID, self.version, self.code, self.payloadSize = struct.unpack(f"<{CLIENT_ID_SIZE}sBHL", data[:self.SIZE])
+            self.clientID = self.clientID.hex()
         except Exception as e:
             raise Exception(f"Error parsing request header: {e}")
 
@@ -63,7 +64,7 @@ class RegistrationRequest:
     def unpack(self, data):
         try:
             # trim the byte array after the nul terminating character.
-            self.name = str(struct.unpack(f"<{NAME_SIZE}s", data[:NAME_SIZE])[0].partition(b'\0')[0].decode('utf-8'))
+            self.name = str(struct.unpack(f"<{NAME_SIZE}s", data[:NAME_SIZE])[0].partition(b'\0')[0].decode("utf-8"))
         except:
             raise Exception(f"Error parsing registration request: {e}")
 
@@ -94,6 +95,7 @@ class SendFileRequest:
         try:
             fileNameOffset = CLIENT_ID_SIZE + CONTENT_SIZE_SIZE
             self.clientID, self.contentSize = struct.unpack(f"<{CLIENT_ID_SIZE}sL", data[:fileNameOffset])
+            self.clientID = self.clientID.hex()
             self.fileName = str(struct.unpack(f"<{FILE_NAME_SIZE}s", data[fileNameOffset:self.SIZE])[0].partition(b'\0')[0].decode('utf-8'))
         except Exception as e:
             raise Exception(f"Error parsing send file request: {e}")
@@ -108,7 +110,7 @@ class CRCRequest:
 
     def unpack(self, data):
         try:
-            self.clientID = struct.unpack(f"<{CLIENT_ID_SIZE}s", data[:CLIENT_ID_SIZE])
+            self.clientID = struct.unpack(f"<{CLIENT_ID_SIZE}s", data[:CLIENT_ID_SIZE])[0].hex()
 
             # trim the byte array after the nul terminating character.
             self.fileName = str(struct.unpack(f"<{FILE_NAME_SIZE}s", data[CLIENT_ID_SIZE:self.SIZE])[0].partition(b'\0')[0].decode('utf-8'))
@@ -138,12 +140,12 @@ class RegistrationSuccessResponse():
     def __init__(self):
         self.header = ResponseHeader(ResponseCode.RESPONSE_REGISTRATION_SUCCESS.value)
         self.header.payloadSize = CLIENT_ID_SIZE
-        self.clientID = b""
+        self.clientID = ""
 
     def pack(self):
         try:
             data = self.header.pack()
-            data += struct.pack(f"<{CLIENT_ID_SIZE}s", self.clientID)
+            data += struct.pack(f"<{CLIENT_ID_SIZE}s", bytes.fromhex(self.clientID))
             return data
         except Exception as e:
             raise Exception(f"Error packing registration success response: {e}")
@@ -163,13 +165,13 @@ class AESKeyResponse:
     def __init__(self):
         self.header = ResponseHeader(ResponseCode.RESPONSE_AES_KEY.value)
         self.header.payloadSize = CLIENT_ID_SIZE + AES_KEY_SIZE
-        self.clientID = b""
+        self.clientID = ""
         self.AESKey = b""
 
     def pack(self):
         try:
             data = self.header.pack()
-            data += struct.pack(f"<{CLIENT_ID_SIZE}s", self.clientID)
+            data += struct.pack(f"<{CLIENT_ID_SIZE}s", bytes.fromhex(self.clientID))
             data += struct.pack(f"<{AES_KEY_SIZE}s", self.AESKey)
             return data
         except Exception as e:
@@ -179,7 +181,7 @@ class FileReceivedResponse:
     def __init__(self):
         self.header = ResponseHeader(ResponseCode.RESPONSE_FILE_RECEIVED.value)
         self.header.payloadSize = CLIENT_ID_SIZE + CONTENT_SIZE_SIZE + FILE_NAME_SIZE + CHECKSUM_SIZE
-        self.clientID = b""
+        self.clientID = ""
         self.contentSize = 0
         self.fileName = b""
         self.checksum = 0
@@ -187,7 +189,7 @@ class FileReceivedResponse:
     def pack(self):
         try:
             data = self.header.pack()
-            data += struct.pack(f"<{CLIENT_ID_SIZE}s", self.clientID)
+            data += struct.pack(f"<{CLIENT_ID_SIZE}s", bytes.fromhex(self.clientID))
             data += struct.pack(f"<L", self.contentSize)
 
             encoded = self.fileName.encode('utf-8')

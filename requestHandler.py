@@ -64,7 +64,7 @@ class Handler:
             self.write(conn, response.pack())
             return
 
-        client = database.Client(uuid.uuid4().hex, request.name, str(datetime.now()))
+        client = database.Client(uuid.uuid4().hex, request.name, None, None, None)
         self.database.storeClient(client)
 
         response = protocol.RegistrationSuccessResponse()
@@ -107,7 +107,7 @@ class Handler:
         request.unpack(data)
 
         #TODO validate file name legal
-        path = self.clientFilesFolder + "/" + client.Name
+        path = self.clientFilesFolder + "/" + client.ID
         Path(path).mkdir(parents=True, exist_ok=True)
         filePath =  path + "/" + request.fileName
         file = open(filePath, "wb+")
@@ -177,7 +177,7 @@ class Handler:
         if file.Verified:
             raise Exception(f"File {request.fileName} for client {client.Name} is alrealy verified!")
 
-        path = self.clientFilesFolder + "/" + client.Name
+        path = self.clientFilesFolder + "/" + client.ID
         filePath = path + "/" + request.fileName
         if os.path.exists(filePath):
             os.remove(filePath)
