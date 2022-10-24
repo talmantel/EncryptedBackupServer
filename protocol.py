@@ -166,15 +166,15 @@ class RegistrationFailedResponse:
 class AESKeyResponse:
     def __init__(self):
         self.header = ResponseHeader(ResponseCode.RESPONSE_AES_KEY.value)
-        self.header.payloadSize = CLIENT_ID_SIZE + AES_KEY_SIZE
         self.clientID = b""
         self.AESKey = b""
 
     def pack(self):
         try:
+            self.header.payloadSize = CLIENT_ID_SIZE + len(self.AESKey)
             data = self.header.pack()
             data += struct.pack(f"<{CLIENT_ID_SIZE}s", self.clientID)
-            data += struct.pack(f"<{AES_KEY_SIZE}s", self.AESKey)
+            data += struct.pack(f"<{len(self.AESKey)}s", self.AESKey)
             return data
         except Exception as e:
             raise Exception(f"Error packing AES key response: {e}")
