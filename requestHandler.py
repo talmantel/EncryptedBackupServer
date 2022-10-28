@@ -142,6 +142,7 @@ class Handler:
         bytesToDecrypt = decryptor.getBytesToDecrypt(bytesRead)
         file.write(decryptor.decrypt(data[request.SIZE:request.SIZE + bytesToDecrypt]))
         leftOverBytes = data[request.SIZE + bytesToDecrypt:]
+        totalDecryptedSize = 0
 
         while bytesRead < request.contentSize:
             newData = conn.recv(protocol.PACKET_SIZE)
@@ -150,7 +151,9 @@ class Handler:
                 dataSize = request.contentSize - bytesRead
             leftOverBytes += newData[:dataSize]
             bytesToDecrypt = decryptor.getBytesToDecrypt(len(leftOverBytes))
-            file.write(decryptor.decrypt(leftOverBytes[:bytesToDecrypt]))
+            decrypted = decryptor.decrypt(leftOverBytes[:bytesToDecrypt])
+            totalDecryptedSize += len(decrypted)
+            file.write(decrypted)
             leftOverBytes = leftOverBytes[bytesToDecrypt:]
             bytesRead += dataSize
 
@@ -167,7 +170,7 @@ class Handler:
         response.fileName = request.fileName
         response.checksum = checksum
         self.write(conn, response.pack())
-        print(f"Successful file upload for client: \n{client}\nName: {request.fileName}, Content size: {bytesRead}, Checksum: {checksum}\n")
+        print(f"Successful file upload for client: \n{client}\nName: {request.fileName}, Content size(Encrypted): {bytesRead}, Content size(Decrypted): {totalDecryptedSize}, Checksum: {checksum}\n")
 
     #Handle CRC valid request
     def handleValidCRCRequest(self, conn, requestHeader, data):

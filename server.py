@@ -14,7 +14,7 @@ handler = requestHandler.Handler(DATABASE_FILE, CLIENT_FILES_FILDER)
 def accept(sock, mask):
     conn, addr = sock.accept()
     #print('accepted', conn, 'from', addr)
-    conn.setblocking(False)
+    conn.setblocking(True)
     sel.register(conn, selectors.EVENT_READ, read)
 
 #Handle connection
