@@ -8,6 +8,10 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+def isValidFileName(fileName):
+    if ".." in fileName or "\\" in fileName or "/" in fileName:
+        return False
+    return True
 
 class Handler:
     def __init__(self, databaseFile, clientFilesFolder):
@@ -19,7 +23,7 @@ class Handler:
             protocol.RequestCode.REQUEST_SEND_FILE.value: self.handleSendFileRequest,
             protocol.RequestCode.REQUEST_VALID_CRC.value: self.handleValidCRCRequest,
             protocol.RequestCode.REQUEST_INVALID_CRC.value: self.handleInvalidCRCRequest,
-            protocol.RequestCode.REQUEST_LAST_INVALID_CRC.value: self.handleInvalidCRCRequest
+            protocol.RequestCode.REQUEST_LAST_INVALID_CRC.value: self.handleLastInvalidCRCRequest
         }
 
     def write(self, conn, data):
@@ -39,21 +43,26 @@ class Handler:
                 print(f"Exception while sending response to {conn}: {e}")
 
     def handle(self, conn):
-        data = conn.recv(protocol.PACKET_SIZE)
-        if data:
-            try:
-                requestHeader = protocol.RequestHeader()
-                requestHeader.unpack(data)
-                if requestHeader.code in self.handlers.keys():
-                    self.handlers[requestHeader.code](conn, requestHeader, data[requestHeader.SIZE:])
+        self.done = False
+        try:
+            while not self.done:
+                data = conn.recv(protocol.PACKET_SIZE)
+                if data:
+                    requestHeader = protocol.RequestHeader()
+                    requestHeader.unpack(data)
+                    if requestHeader.code in self.handlers.keys():
+                        self.handlers[requestHeader.code](conn, requestHeader, data[requestHeader.SIZE:])
+                    else:
+                        raise Exception(f"Request code {requestHeader.code} doesn't exist!")
                 else:
-                    raise Exception(f"Request code {requestHeader.code} doesn't exist!")
-            except Exception as e:
-                print(f"Exception in handle request: {e}")
-                # Not sure what to do here. There are no details in the assignment what to do in case of any error (other than registration error).
-                # Here I do nothing, but I could send some generic error code like the next two lines:
-                #responseHeader = protocol.ResponseHeader(protocol.ResponseCode.RESPONSE_ERROR.value)
-                #self.write(conn, responseHeader.pack())
+                    self.done = True
+        except Exception as e:
+            print(f"Exception in handle request: {e}")
+            return
+            # Not sure what to do here. There are no details in the assignment what to do in case of any error (other than registration error).
+            # Here I do nothing, but I could send some generic error code like the next two lines:
+            # responseHeader = protocol.ResponseHeader(protocol.ResponseCode.RESPONSE_ERROR.value)
+            # self.write(conn, responseHeader.pack())
 
     def handleRegistrationRequest(self, conn, requestHeader, data):
         request = protocol.RegistrationRequest()
@@ -106,22 +115,33 @@ class Handler:
         request = protocol.SendFileRequest()
         request.unpack(data)
 
-        #TODO validate file name legal
+        if not isValidFileName(request.fileName):
+            raise Exception(f"Filename {request.fileName} is invalid!")
+
         path = self.clientFilesFolder + "/" + client.ID.hex()
         Path(path).mkdir(parents=True, exist_ok=True)
         filePath =  path + "/" + request.fileName
         file = open(filePath, "wb+")
 
+        #TODO read in multiples of AES_KEY_SIZE
         bytesRead = len(data) - request.SIZE
         if bytesRead > request.contentSize:
             bytesRead = request.contentSize
-        file.write(cryptUtil.decrypt(data[request.SIZE:request.SIZE + bytesRead], client.AES))
+
+        decryptor = cryptUtil.AESDecrypt(client.AES)
+        bytesToDecrypt = decryptor.getBytesToDecrypt(bytesRead)
+        file.write(decryptor.decrypt(data[request.SIZE:request.SIZE + bytesToDecrypt]))
+        leftOverBytes = data[request.SIZE + bytesToDecrypt:]
+
         while bytesRead < request.contentSize:
-            data = conn.recv(protocol.PACKET_SIZE)
-            dataSize = len(data)
+            newData = conn.recv(protocol.PACKET_SIZE)
+            dataSize = len(newData)
             if (request.contentSize - bytesRead) < dataSize:
                 dataSize = request.contentSize - bytesRead
-            file.write(cryptUtil.decrypt(data[:dataSize], client.AES))
+            leftOverBytes += newData[:dataSize]
+            bytesToDecrypt = decryptor.getBytesToDecrypt(len(leftOverBytes))
+            file.write(decryptor.decrypt(leftOverBytes[:bytesToDecrypt]))
+            leftOverBytes = leftOverBytes[bytesToDecrypt:]
             bytesRead += dataSize
 
         file.close()
@@ -159,6 +179,7 @@ class Handler:
         response = protocol.MessageReceivedResponse()
         self.write(conn, response.pack())
         print(f"Successful validation of CRC of file: {file.FileName} for client {client.Name}\n")
+        self.done = True
 
     def handleInvalidCRCRequest(self, conn, requestHeader, data):
         client = self.database.getClientById(requestHeader.clientID)
@@ -187,3 +208,8 @@ class Handler:
         response = protocol.MessageReceivedResponse()
         self.write(conn, response.pack())
         print(f"File: {file.FileName} of client {client.Name} removed due to invalid CRC\n")
+
+
+    def handleLastInvalidCRCRequest(self, conn, requestHeader, data):
+        handleInvalidCRCRequest(conn, requestHeader, data)
+        self.done = True
