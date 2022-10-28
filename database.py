@@ -72,14 +72,16 @@ class Database:
         cur.execute(f"SELECT * FROM {Database.CLIENTS_TABLE}")
         results = cur.fetchall()
         for client in results:
-            c = Client(client[0], client[1], client[2], client[3], client[4])
+            # Remove null terminator from client name
+            c = Client(client[0], client[1].partition('\0')[0], client[2], client[3], client[4])
             self.clients.append(c)
             print(f"Loaded client from DB: {c}\n")
 
         cur.execute(f"SELECT * FROM {Database.FILES_TABLE}")
         results = cur.fetchall()
         for file in results:
-            f = File(file[0], file[1], file[2], file[3])
+            #Remove null terminator from file name and path name
+            f = File(file[0], file[1].partition('\0')[0], file[2].partition('\0')[0], file[3])
             self.files.append(f)
             print(f"Loaded file from DB: {f}\n")
 
@@ -98,7 +100,8 @@ class Database:
     #Store new client in the system. LastSeen is set to current time
     def storeClient(self, client):
         self.clients.append(client)
-        self.execute(f"INSERT INTO {Database.CLIENTS_TABLE} (ID, Name, LastSeen) VALUES (?, ?, CURRENT_TIMESTAMP)", [client.ID, client.Name])
+        # Add null terminator to client name (as specified in requirements)
+        self.execute(f"INSERT INTO {Database.CLIENTS_TABLE} (ID, Name, LastSeen) VALUES (?, ?, CURRENT_TIMESTAMP)", [client.ID, client.Name + "\0"])
 
     #Update LastSeen of client to the current timestamp
     def updateClientLastSeen(self, client):
@@ -131,7 +134,8 @@ class Database:
         if file is not None:
             self.removeFile(file)
         self.files.append(File(client.ID, fileName, filePath, False))
-        self.execute(f"INSERT INTO {Database.FILES_TABLE} VALUES (?, ?, ?, ?)", [client.ID, fileName, filePath, False])
+        # Add null terminator to file name and path name (as specified in requirements)
+        self.execute(f"INSERT INTO {Database.FILES_TABLE} VALUES (?, ?, ?, ?)", [client.ID, fileName + "\0", filePath + "\0", False])
 
     #Get file by client and filename
     def getFile(self, client, fileName):
