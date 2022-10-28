@@ -10,14 +10,14 @@ QUEUE_SIZE = 100
 sel = selectors.DefaultSelector()
 handler = requestHandler.Handler(DATABASE_FILE, CLIENT_FILES_FILDER)
 
-
+#Accept new connection
 def accept(sock, mask):
     conn, addr = sock.accept()
     #print('accepted', conn, 'from', addr)
     conn.setblocking(False)
     sel.register(conn, selectors.EVENT_READ, read)
 
-
+#Handle connection
 def read(conn, mask):
     handler.handle(conn)
     sel.unregister(conn)

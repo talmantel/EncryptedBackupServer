@@ -37,7 +37,7 @@ class ResponseCode(Enum):
     RESPONSE_FILE_RECEIVED = 2103
     RESPONSE_MESSAGE_RECEIVED = 2104
 
-
+#Header for all reqeusts
 class RequestHeader:
 
     def __init__(self):
@@ -84,7 +84,7 @@ class PublicKeyRequest:
         except:
             raise Exception(f"Error parsing public key request: {e}")
 
-
+#Send file request payload - without the content itself
 class SendFileRequest:
     def __init__(self):
         self.clientID = b""
@@ -103,7 +103,7 @@ class SendFileRequest:
             raise Exception(f"Error parsing send file request: {e}")
 
 
-#Used by all three of the CRC requests:   REQUEST_VALID_CRC = 1104, REQUEST_INVALID_CRC = 1105, REQUEST_LAST_INVALID_CRC = 1106
+#All three of the CRC requests:   REQUEST_VALID_CRC = 1104, REQUEST_INVALID_CRC = 1105, REQUEST_LAST_INVALID_CRC = 1106
 class CRCRequest:
     def __init__(self):
         self.clientID = b""
@@ -124,7 +124,7 @@ class CRCRequest:
 
 
 
-
+#Header for all responses
 class ResponseHeader:
     def __init__(self, code):
         self.version = SERVER_VERSION
@@ -171,6 +171,7 @@ class AESKeyResponse:
 
     def pack(self):
         try:
+            #The size of the encrypted AESKey is changing, and so has to be calculated after AESKey is set - during packing
             self.header.payloadSize = CLIENT_ID_SIZE + len(self.AESKey)
             data = self.header.pack()
             data += struct.pack(f"<{CLIENT_ID_SIZE}s", self.clientID)
@@ -205,6 +206,7 @@ class FileReceivedResponse:
         except Exception as e:
             raise Exception(f"Error packing AES key response: {e}")
 
+#Message received ressponse - returned in reponse to valid\invalid CRC requests
 class MessageReceivedResponse:
     def __init__(self):
         self.header = ResponseHeader(ResponseCode.RESPONSE_MESSAGE_RECEIVED.value)

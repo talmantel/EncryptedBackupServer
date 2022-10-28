@@ -6,10 +6,11 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Util.Padding import unpad
 import base64
 
-
+#Generate random AES key
 def generateAESKey():
     return os.urandom(protocol.AES_KEY_SIZE)
 
+#Returns content encrypted using RSA with publicKey
 def encryptWithPublicKey(content, publicKey):
     key = RSA.importKey(publicKey)
     cipher = PKCS1_OAEP.new(key)

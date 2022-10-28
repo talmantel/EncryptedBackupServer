@@ -4,7 +4,7 @@ from pathlib import Path
 PORT_INFO_FILE = "port.info"
 DEFAULT_PORT = 1234
 
-
+#Parse post from port file, or default if no port file found
 def getPort():
     p = Path(PORT_INFO_FILE)
     if p.exists():

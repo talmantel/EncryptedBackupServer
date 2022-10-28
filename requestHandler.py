@@ -8,11 +8,13 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+#Validate file name to prevent path traversal
 def isValidFileName(fileName):
     if ".." in fileName or "\\" in fileName or "/" in fileName:
         return False
     return True
 
+#Handles a connection
 class Handler:
     def __init__(self, databaseFile, clientFilesFolder):
         self.database = database.Database(databaseFile)
@@ -43,11 +45,14 @@ class Handler:
                 print(f"Exception while sending response to {conn}: {e}")
 
     def handle(self, conn):
+        #done is used to indicate wether to expect any more requests on this connection, or not.
+        #If no more requests are expected we can stop handling the connection and exit
         self.done = False
         try:
             while not self.done:
                 data = conn.recv(protocol.PACKET_SIZE)
                 if data:
+                    #Parse request header and call the appropriate method to handle the request
                     requestHeader = protocol.RequestHeader()
                     requestHeader.unpack(data)
                     if requestHeader.code in self.handlers.keys():
@@ -64,10 +69,12 @@ class Handler:
             # responseHeader = protocol.ResponseHeader(protocol.ResponseCode.RESPONSE_ERROR.value)
             # self.write(conn, responseHeader.pack())
 
+    #Handle registration request
     def handleRegistrationRequest(self, conn, requestHeader, data):
         request = protocol.RegistrationRequest()
         request.unpack(data)
 
+        #Check username is available
         if self.database.getClientByUsername(request.name) is not None:
             response = protocol.RegistrationFailedResponse()
             self.write(conn, response.pack())
@@ -81,7 +88,7 @@ class Handler:
         self.write(conn, response.pack())
         print(f"Successful regustration of: \n{client}\n")
 
-
+    #Handle key exchange request
     def handlePublicKeyRequest(self, conn, requestHeader, data):
         client = self.database.getClientById(requestHeader.clientID)
         if client is None:
@@ -92,9 +99,11 @@ class Handler:
         request = protocol.PublicKeyRequest()
         request.unpack(data)
 
+        #Generate new AES Key for client
         AESKey = cryptUtil.generateAESKey()
         self.database.setClientKeys(client, request.publicKey, AESKey)
 
+        #Encrypt AES Key with RSA using public key supplied by user, and send encrypted AES Key back to the client
         encryptedKey = cryptUtil.encryptWithPublicKey(AESKey, client.PublicKey)
         response = protocol.AESKeyResponse()
         response.clientID = client.ID
@@ -102,6 +111,7 @@ class Handler:
         self.write(conn, response.pack())
         print(f"Successful regustration of encryption keys for client: \n{client}\n")
 
+    #Handle new file request
     def handleSendFileRequest(self, conn, requestHeader, data):
         client = self.database.getClientById(requestHeader.clientID)
         if client is None:
@@ -159,6 +169,7 @@ class Handler:
         self.write(conn, response.pack())
         print(f"Successful file upload for client: \n{client}\nName: {request.fileName}, Content size: {bytesRead}, Checksum: {checksum}\n")
 
+    #Handle CRC valid request
     def handleValidCRCRequest(self, conn, requestHeader, data):
         client = self.database.getClientById(requestHeader.clientID)
         if client is None:
@@ -176,11 +187,14 @@ class Handler:
 
         self.database.verifyFile(file)
 
+        # Respond with "Message Receievd". Protocol doesn't clearly define when this is required
+        # In this case I chose to response with message received on any valid\invalid CRC request.
         response = protocol.MessageReceivedResponse()
         self.write(conn, response.pack())
         print(f"Successful validation of CRC of file: {file.FileName} for client {client.Name}\n")
         self.done = True
 
+    # Handle CRC invalid request
     def handleInvalidCRCRequest(self, conn, requestHeader, data):
         client = self.database.getClientById(requestHeader.clientID)
         if client is None:
@@ -205,11 +219,13 @@ class Handler:
 
         self.database.removeFile(file)
 
+        #Respond with "Message Receievd". Protocol doesn't clearly define when this is required
+        #In this case I chose to response with message received on any valid\invalid CRC request.
         response = protocol.MessageReceivedResponse()
         self.write(conn, response.pack())
         print(f"File: {file.FileName} of client {client.Name} removed due to invalid CRC\n")
 
-
+    # Handle last CRC invalid request (No more attempts to send the file are expected)
     def handleLastInvalidCRCRequest(self, conn, requestHeader, data):
         handleInvalidCRCRequest(conn, requestHeader, data)
         self.done = True
