@@ -178,7 +178,7 @@ class Handler:
         response.clientID = client.ID
         response.contentSize = bytesRead
         response.fileName = request.fileName + "\0" #Protocol requires to return filename as it was received from client - with null terminator
-        response.checksum =  cksum.digest()
+        response.checksum =  cksum.digest() + 1
         self.write(conn, response.pack())
         print(f"Successful file upload for client: \n{client}\nName: {request.fileName}, Content size(Encrypted): {bytesRead}, Content size(Decrypted): {totalDecryptedSize}, Checksum: {response.checksum}\n")
 
@@ -240,5 +240,6 @@ class Handler:
 
     # Handle last CRC invalid request (No more attempts to send the file are expected)
     def handleLastInvalidCRCRequest(self, conn, requestHeader, data):
-        handleInvalidCRCRequest(conn, requestHeader, data)
+        self.handleInvalidCRCRequest(conn, requestHeader, data)
+        print("Last invalid CRC. No more attempts expected\n")
         self.done = True
