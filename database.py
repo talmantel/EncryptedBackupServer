@@ -147,9 +147,9 @@ class Database:
     #Update file CRC verified
     def verifyFile(self, file):
         file.Verified = True
-        self.execute(f"UPDATE {Database.FILES_TABLE} SET Verified = true WHERE ID = ? AND FileName = ?", [file.ID, file.FileName])
+        self.execute(f"UPDATE {Database.FILES_TABLE} SET Verified = true WHERE ID = ? AND FileName = ?", [file.ID, file.FileName + "\0"])
 
     #Remove a file from the system
     def removeFile(self, file):
         self.files.remove(file)
-        self.execute(f"DELETE FROM {Database.FILES_TABLE} WHERE ID = ? AND FileName = ?", [file.ID, file.FileName])
+        self.execute(f"DELETE FROM {Database.FILES_TABLE} WHERE ID = ? AND FileName = ?", [file.ID, file.FileName + "\0"])
