@@ -178,7 +178,7 @@ class Handler:
         response.clientID = client.ID
         response.contentSize = bytesRead
         response.fileName = request.fileName + "\0" #Protocol requires to return filename as it was received from client - with null terminator
-        response.checksum =  cksum.digest() + 1
+        response.checksum =  cksum.digest()
         self.write(conn, response.pack())
         print(f"Successful file upload for client: \n{client}\nName: {request.fileName}, Content size(Encrypted): {bytesRead}, Content size(Decrypted): {totalDecryptedSize}, Checksum: {response.checksum}\n")
 
