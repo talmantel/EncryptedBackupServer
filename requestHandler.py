@@ -133,25 +133,27 @@ class Handler:
         filePath =  path + "/" + request.fileName
         file = open(filePath, "wb+")
 
-        #TODO read in multiples of AES_KEY_SIZE
+        isLastBlock = False
         bytesRead = len(data) - request.SIZE
-        if bytesRead > request.contentSize:
+        if bytesRead >= request.contentSize:
             bytesRead = request.contentSize
+            isLastBlock = True
 
         decryptor = cryptUtil.AESDecrypt(client.AES)
         bytesToDecrypt = decryptor.getBytesToDecrypt(bytesRead)
-        file.write(decryptor.decrypt(data[request.SIZE:request.SIZE + bytesToDecrypt]))
+        file.write(decryptor.decrypt(data[request.SIZE:request.SIZE + bytesToDecrypt], isLastBlock))
         leftOverBytes = data[request.SIZE + bytesToDecrypt:]
         totalDecryptedSize = 0
 
         while bytesRead < request.contentSize:
             newData = conn.recv(protocol.PACKET_SIZE)
             dataSize = len(newData)
-            if (request.contentSize - bytesRead) < dataSize:
+            if (request.contentSize - bytesRead) <= dataSize:
                 dataSize = request.contentSize - bytesRead
+                isLastBlock = True
             leftOverBytes += newData[:dataSize]
             bytesToDecrypt = decryptor.getBytesToDecrypt(len(leftOverBytes))
-            decrypted = decryptor.decrypt(leftOverBytes[:bytesToDecrypt])
+            decrypted = decryptor.decrypt(leftOverBytes[:bytesToDecrypt], isLastBlock)
             totalDecryptedSize += len(decrypted)
             file.write(decrypted)
             leftOverBytes = leftOverBytes[bytesToDecrypt:]
