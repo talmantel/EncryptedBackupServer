@@ -1,5 +1,6 @@
 import logging
 import protocol
+import crc
 import cryptUtil
 import database
 import uuid
@@ -119,6 +120,7 @@ class Handler:
 
         self.database.updateClientLastSeen(client)
 
+        #Make sure keys were exchanged for this client (otherwise we can't decrypt the file..)
         if client.AES is None:
             raise Exception(f"User with id {requestHeader.clientID} doesn't have AES key yet!")
 
@@ -128,22 +130,29 @@ class Handler:
         if not isValidFileName(request.fileName):
             raise Exception(f"Filename {request.fileName} is invalid!")
 
+        #Create the file on the server
         path = self.clientFilesFolder + "/" + client.ID.hex()
         Path(path).mkdir(parents=True, exist_ok=True)
         filePath =  path + "/" + request.fileName
         file = open(filePath, "wb+")
 
+        #Read encrypted data. isLastBlock is used to know when we should unpad decrypted data
         isLastBlock = False
         bytesRead = len(data) - request.SIZE
         if bytesRead >= request.contentSize:
             bytesRead = request.contentSize
             isLastBlock = True
 
+        #Read, decrypt and update CRC calulation with each incoming packet
+        cksum = crc.Checksum()
         decryptor = cryptUtil.AESDecrypt(client.AES)
+
         bytesToDecrypt = decryptor.getBytesToDecrypt(bytesRead)
-        file.write(decryptor.decrypt(data[request.SIZE:request.SIZE + bytesToDecrypt], isLastBlock))
+        decrypted = decryptor.decrypt(data[request.SIZE:request.SIZE + bytesToDecrypt], isLastBlock)
+        cksum.update(decrypted)
+        file.write(decrypted)
         leftOverBytes = data[request.SIZE + bytesToDecrypt:]
-        totalDecryptedSize = 0
+        totalDecryptedSize = len(decrypted)
 
         while bytesRead < request.contentSize:
             newData = conn.recv(protocol.PACKET_SIZE)
@@ -154,6 +163,7 @@ class Handler:
             leftOverBytes += newData[:dataSize]
             bytesToDecrypt = decryptor.getBytesToDecrypt(len(leftOverBytes))
             decrypted = decryptor.decrypt(leftOverBytes[:bytesToDecrypt], isLastBlock)
+            cksum.update(decrypted)
             totalDecryptedSize += len(decrypted)
             file.write(decrypted)
             leftOverBytes = leftOverBytes[bytesToDecrypt:]
@@ -163,16 +173,14 @@ class Handler:
 
         self.database.saveFile(client, filePath, request.fileName)
 
-        #TODO calculate CRC
-        checksum = 1234
-
+        #Send response to client
         response = protocol.FileReceivedResponse()
         response.clientID = client.ID
         response.contentSize = bytesRead
         response.fileName = request.fileName + "\0" #Protocol requires to return filename as it was received from client - with null terminator
-        response.checksum = checksum
+        response.checksum =  cksum.digest()
         self.write(conn, response.pack())
-        print(f"Successful file upload for client: \n{client}\nName: {request.fileName}, Content size(Encrypted): {bytesRead}, Content size(Decrypted): {totalDecryptedSize}, Checksum: {checksum}\n")
+        print(f"Successful file upload for client: \n{client}\nName: {request.fileName}, Content size(Encrypted): {bytesRead}, Content size(Decrypted): {totalDecryptedSize}, Checksum: {response.checksum}\n")
 
     #Handle CRC valid request
     def handleValidCRCRequest(self, conn, requestHeader, data):
